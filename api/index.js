@@ -103,4 +103,40 @@ router.post('/verifytoken', (req, res) => {
     }));
   });
 });
+
+router.post('/admin-login', (req, res) => {
+  const email = req.body.email;
+  const password = md5(req.body.password);
+  
+  UserCollection.findOne({email}).then(user => {
+    if( user === null ) {
+      res.send(JSON.stringify({
+        code: 'failed',
+        message: 'Email is not found!'
+      }));
+    } else {
+      if( !user.active || !user.admin ) {
+        res.send(JSON.stringify({
+          code: 'failed',
+          message: 'User is not active now!'
+        }));
+      } else if( user.password === password ) {
+        const token = jwt.sign(
+          { email: email },
+          jwtSecret,
+          { expiresIn: '24h' });
+        res.send(JSON.stringify({
+          code: 'success',
+          message: 'Successfully Logged In!',
+          token: token
+        }));
+      } else {
+        res.send(JSON.stringify({
+          code: 'failed',
+          message: 'Password is not correct!'
+        }));
+      }
+    }
+  });
+});
 module.exports = router;
