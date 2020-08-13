@@ -84,11 +84,23 @@ router.post('/verifytoken', (req, res) => {
   jwt.verify(token, jwtSecret, function(err, decoded) {
     if( err ) {
       if( err.message === 'jwt expired' ) {
-        //
+        res.send(JSON.stringify({
+          code: 'Failed',
+          message: 'expired'
+        }));
       } else {
-        //
+        res.send(JSON.stringify({
+          code: 'Failed',
+          message: 'Invalid Token'
+        }));
       }
+      return ;
     }
+    console.log(decoded);
+    res.send(JSON.stringify({
+      code: 'Success',
+      message: 'Successfully Verified'
+    }));
   });
 });
 module.exports = router;
