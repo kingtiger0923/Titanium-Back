@@ -1,9 +1,13 @@
 var express = require('express');
 var router = express.Router();
+// Password Hash MD5
 var md5 = require('md5');
+// JSON WEB TOKEN
 var jwt = require('jsonwebtoken');
 const jwtSecret = 'ABTWOFKRSJDKFTLSKFJSOWK';
+// File System
 var multer = require('multer');
+var fs = require('fs');
 
 var storage = multer.diskStorage({
   destination: 'uploads/',
@@ -13,8 +17,9 @@ var storage = multer.diskStorage({
 });
 var upload = multer({storage});
 
+// Mongoose Models
 const UserCollection = require('../models/UserModel');
-const UploadCollection = require('../models/UploadModel');
+const PDFCollection = require('../models/PDFModel');
 
 // Create User
 router.post('/join', (req, res) => {
@@ -114,7 +119,7 @@ router.post('/verifytoken', (req, res) => {
     }));
   });
 });
-
+// Admin Get Full Data
 router.post('/adminData', (req, res) => {
   const token = req.body.token;
   if( token === undefined || token === '' ) {
@@ -152,7 +157,7 @@ router.post('/adminData', (req, res) => {
     });
   });
 });
-
+// User Get Full Data
 router.post('/userData', (req, res) => {
   const token = req.body.token;
   jwt.verify(token, jwtSecret, function(err, decoded) {
@@ -182,24 +187,33 @@ router.post('/userData', (req, res) => {
     });
   });
 });
-
-router.post('/upload', upload.single('file'), (req, res) => {
+// Upload PDF
+router.post('/pdfupload', upload.single('file'), (req, res) => {
   console.log(req.file);
   const fileName = req.file.filename;
   const splits = fileName.split('.');
   const type = splits[splits.length - 1];
+  if( type.toLowerCase() !== 'pdf' ) {
+    fs.unlinkSync('./uploads/' + fileName);
+    res.send("failed");
+    return ;
+  }
+  if( !fs.existsSync('./pdfs') )
+    fs.mkdirSync( './pdfs' );
+  fs.renameSync('./uploads/' + fileName, './pdfs/' + fileName);
+  const filePath = 'pdfs/' + fileName;
   const curDate = new Date();
   const dateText = curDate.getFullYear() + '/' + curDate.getMonth() + '/' + curDate.getDate()
               + ' ' + curDate.getHours() + ':' + curDate.getMinutes() + ':' + curDate.getSeconds();
 
-  UploadCollection.find({fileName}).then(obj => {
+  PDFCollection.find({fileName}).then(obj => {
     if( obj !== null ) {
-      UploadCollection.create({
+      PDFCollection.create({
         fileName: fileName,
-        fileType: type,
         date: dateText,
         title: fileName,
-        author: fileName
+        author: fileName,
+        filePath: filePath
       });
       res.send("success");
     }
