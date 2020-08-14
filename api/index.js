@@ -20,6 +20,7 @@ var upload = multer({storage});
 // Mongoose Models
 const UserCollection = require('../models/UserModel');
 const PDFCollection = require('../models/PDFModel');
+const LinkCollection = require('../models/LinksModel');
 
 // Create User
 router.post('/join', (req, res) => {
@@ -145,15 +146,32 @@ router.post('/adminData', (req, res) => {
       }
       return ;
     }
-    UploadCollection.find({}).then(upload => {
-      return upload;
-    }).then(uploads => {
-      UserCollection.find({}).then(users => {
+    UserCollection.findOne({email:decoded.email}).then(user => {
+      if( user !== null && user.admin && user.active ) {
+        PDFCollection.find({}).then(upload => {
+          return upload;
+        }).then(uploads => {
+          UserCollection.find({}).then(users => {
+            // res.send(JSON.stringify({
+            //   users,
+            //   pdfs: uploads
+            // }));
+            return {users, pdfs: uploads};
+          }).then(data => {
+            LinkCollection.find({}).then(links => {
+              res.send(JSON.stringify({
+                ...data,
+                links
+              }));
+            });
+          })
+        });
+      } else {
         res.send(JSON.stringify({
-          users,
-          uploads
+          code: 'Failed',
+          message: 'Not Logged In'
         }));
-      })
+      }
     });
   });
 });
@@ -175,21 +193,24 @@ router.post('/userData', (req, res) => {
       }
       return ;
     }
-    UploadCollection.find({}).then(upload => {
-      return upload;
-    }).then(uploads => {
-      UserCollection.find({}).then(users => {
+    UserCollection.findOne({email:decoded.email}).then(user => {
+      if( user !== null && !user.admin && user.active ) {
+        PDFCollection.find({}).then(upload => {
+          res.send(JSON.stringify({
+            pdfs: upload
+          }));
+        });
+      } else {
         res.send(JSON.stringify({
-          users,
-          uploads
+          code: 'Failed',
+          message: 'Not Logged In'
         }));
-      })
+      }
     });
   });
 });
 // Upload PDF
 router.post('/pdfupload', upload.single('file'), (req, res) => {
-  console.log(req.file);
   const fileName = req.file.filename;
   const splits = fileName.split('.');
   const type = splits[splits.length - 1];
@@ -203,7 +224,7 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
   fs.renameSync('./uploads/' + fileName, './pdfs/' + fileName);
   const filePath = 'pdfs/' + fileName;
   const curDate = new Date();
-  const dateText = curDate.getFullYear() + '/' + curDate.getMonth() + '/' + curDate.getDate()
+  const dateText = curDate.getFullYear() + '/' + (curDate.getMonth() + 1) + '/' + curDate.getDate()
               + ' ' + curDate.getHours() + ':' + curDate.getMinutes() + ':' + curDate.getSeconds();
 
   PDFCollection.find({fileName}).then(obj => {
@@ -212,12 +233,32 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
         fileName: fileName,
         date: dateText,
         title: fileName,
-        author: fileName,
+        author: "Admin",
         filePath: filePath
       });
       res.send("success");
     }
   })
 });
-
+// Add Links
+router.post('/addlinks', (req, res) => {
+  let link = req.body.path;
+  let name = req.body.name;
+  if( link === '' || name === '' || link === undefined || name === undefined ) {
+    res.send("failed");
+    return ;
+  }
+  LinkCollection.findOne({link}).then((link) => {
+    if( link !== null ) {
+      link.name = name;
+      link.save();
+    } else {
+      LinkCollection.create({
+        link,
+        name
+      });
+    }
+    res.send("success");
+  });
+})
 module.exports = router;

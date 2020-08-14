@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 // Create Schema
 const LinksSchema = new Schema({
-  path: String,
+  link: String,
   name: String
 });
 
