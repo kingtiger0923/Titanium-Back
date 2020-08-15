@@ -196,9 +196,14 @@ router.post('/userData', (req, res) => {
     UserCollection.findOne({email:decoded.email}).then(user => {
       if( user !== null && !user.admin && user.active ) {
         PDFCollection.find({}).then(upload => {
-          res.send(JSON.stringify({
-            pdfs: upload
-          }));
+          return upload;
+        }).then(upload => {
+          LinkCollection.find({}).then(links => {
+            res.send(JSON.stringify({
+              pdfs: upload,
+              links
+            }));
+          })
         });
       } else {
         res.send(JSON.stringify({
@@ -242,16 +247,16 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
 });
 // Add Links
 router.post('/addlinks', (req, res) => {
-  let link = req.body.path;
-  let name = req.body.name;
+  let link = req.body.linkPath;
+  let name = req.body.linkName;
   if( link === '' || name === '' || link === undefined || name === undefined ) {
     res.send("failed");
     return ;
   }
-  LinkCollection.findOne({link}).then((link) => {
-    if( link !== null ) {
-      link.name = name;
-      link.save();
+  LinkCollection.findOne({link}).then((links) => {
+    if( links !== null ) {
+      links.name = name;
+      links.save();
     } else {
       LinkCollection.create({
         link,
