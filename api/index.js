@@ -1,5 +1,6 @@
 var express = require('express');
 var router = express.Router();
+const { ObjectId } = require('mongodb');
 // Password Hash MD5
 var md5 = require('md5');
 // JSON WEB TOKEN
@@ -36,7 +37,7 @@ router.post('/join', (req, res) => {
         lastName,
         password,
         admin: false,
-        active: true
+        active: false
       }, function(err) {
         if( err ) {
           res.send(JSON.stringify({
@@ -265,5 +266,20 @@ router.post('/addlinks', (req, res) => {
     }
     res.send("success");
   });
-})
+});
+
+router.post('/changePermission', (req, res) => {
+  let id = req.body.id;
+  UserCollection.findOne({_id:ObjectId(id)}).then(user => {
+    if( user !== null ) {
+      user.active = !user.active;
+      user.save();
+      res.send("success");
+    } else {
+      res.send("failed");
+    }
+  }).catch(err => {
+    res.send("failed");
+  })
+});
 module.exports = router;
