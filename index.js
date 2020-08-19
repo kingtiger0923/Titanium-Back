@@ -14,6 +14,8 @@ app.use(cors());
 
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
+app.use('/public', express.static('pdfs'));
+
 app.use(apiRoutes);
 
 app.listen(appPort, () => console.log(`Server running on port ${appPort}`));

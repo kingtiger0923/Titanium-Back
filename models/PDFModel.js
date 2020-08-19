@@ -7,7 +7,8 @@ const PDFSchema = new Schema({
   date: String,
   title: String,
   author: String,
-  filePath: String
+  filePath: String,
+  group: String
 });
 
 module.exports = PDFCollection = mongoose.model("pdf", PDFSchema);

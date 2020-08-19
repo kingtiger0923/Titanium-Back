@@ -220,6 +220,7 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
   const fileName = req.file.filename;
   const splits = fileName.split('.');
   const type = splits[splits.length - 1];
+  const group = req.query.Type;
   if( type.toLowerCase() !== 'pdf' ) {
     fs.unlinkSync('./uploads/' + fileName);
     res.send("failed");
@@ -227,8 +228,8 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
   }
   if( !fs.existsSync('./pdfs') )
     fs.mkdirSync( './pdfs' );
-  fs.renameSync('./uploads/' + fileName, './pdfs/' + fileName);
-  const filePath = 'pdfs/' + fileName;
+  fs.renameSync('./uploads/' + fileName, './pdfs/'+ group + '-' + fileName);
+  const filePath = 'pdfs/'+ group + '-' + fileName;
   const curDate = new Date();
   const dateText = curDate.getFullYear() + '/' + (curDate.getMonth() + 1) + '/' + curDate.getDate()
               + ' ' + curDate.getHours() + ':' + curDate.getMinutes() + ':' + curDate.getSeconds();
@@ -240,7 +241,8 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
         date: dateText,
         title: fileName,
         author: "Admin",
-        filePath: filePath
+        filePath: filePath,
+        group: group
       });
       res.send("success");
     }
@@ -281,5 +283,15 @@ router.post('/changePermission', (req, res) => {
   }).catch(err => {
     res.send("failed");
   })
+});
+
+router.post('/removepdf', (req, res) => {
+  let id = req.body.id;
+  console.log(id);
+  PDFCollection.deleteOne({_id:ObjectId(id)}).then(() => {
+    res.send("success");
+  }).catch(() => {
+    res.send("Failed");
+  });
 });
 module.exports = router;
