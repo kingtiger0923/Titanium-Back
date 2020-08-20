@@ -22,6 +22,7 @@ var upload = multer({storage});
 const UserCollection = require('../models/UserModel');
 const PDFCollection = require('../models/PDFModel');
 const LinkCollection = require('../models/LinksModel');
+const InventoryCollection = require('../models/InventoryModel');
 
 // Create User
 router.post('/join', (req, res) => {
@@ -153,18 +154,21 @@ router.post('/adminData', (req, res) => {
           return upload;
         }).then(uploads => {
           UserCollection.find({}).then(users => {
-            // res.send(JSON.stringify({
-            //   users,
-            //   pdfs: uploads
-            // }));
             return {users, pdfs: uploads};
           }).then(data => {
             LinkCollection.find({}).then(links => {
-              res.send(JSON.stringify({
+              return {
                 ...data,
                 links
-              }));
-            });
+              };
+            }).then(tdata => {
+              InventoryCollection.find({}).then(inventory => {
+                res.send(JSON.stringify({
+                  ...tdata,
+                  inventory
+                }));
+              })
+            })
           })
         });
       } else {
@@ -200,10 +204,17 @@ router.post('/userData', (req, res) => {
           return upload;
         }).then(upload => {
           LinkCollection.find({}).then(links => {
-            res.send(JSON.stringify({
+            return {
               pdfs: upload,
               links
-            }));
+            };
+          }).then(data => {
+            InventoryCollection.find({}).then(inventory => {
+              res.send(JSON.stringify({
+                ...data,
+                inventory
+              }));
+            });
           })
         });
       } else {
@@ -234,8 +245,8 @@ router.post('/pdfupload', upload.single('file'), (req, res) => {
   const dateText = curDate.getFullYear() + '/' + (curDate.getMonth() + 1) + '/' + curDate.getDate()
               + ' ' + curDate.getHours() + ':' + curDate.getMinutes() + ':' + curDate.getSeconds();
 
-  PDFCollection.find({fileName}).then(obj => {
-    if( obj !== null ) {
+  PDFCollection.findOne({fileName, group}).then(obj => {
+    if( obj === null ) {
       PDFCollection.create({
         fileName: fileName,
         date: dateText,
@@ -294,4 +305,49 @@ router.post('/removepdf', (req, res) => {
     res.send("Failed");
   });
 });
+// Upload Inventory
+router.post('/addInventory', upload.single('file'), (req, res) => {
+  const fileName = req.file.filename;
+  const splits = fileName.split('.');
+  const type = splits[splits.length - 1];
+  const iName = req.query.iName;
+  const iCount = req.query.iCount;
+  if( type.toLowerCase() !== 'jpg' && type.toLowerCase() !== 'png' ) {
+    fs.unlinkSync('./uploads/' + fileName);
+    res.send("failed");
+    return ;
+  }
+  if( !fs.existsSync('./inventory') )
+    fs.mkdirSync( './inventory' );
+  fs.renameSync('./uploads/' + fileName, './inventory/' + iName + '.' + type);
+  const filePath = 'products/'+ iName + '.' + type;
+
+  InventoryCollection.findOne({name: iName}).then(obj => {
+    if( obj === null ) {
+      InventoryCollection.create({
+        name: iName,
+        count: iCount,
+        image: filePath
+      });
+      res.send("success");
+    }
+  })
+});
+
+router.post('/editInventory', (req, res) => {
+  const id = req.body.id;
+  const val = req.body.val;
+
+  InventoryCollection.findOne({_id: ObjectId(id)}).then(item => {
+    if( item !== null ) {
+      item.count = val;
+      item.save();
+      res.send("success");
+    } else {
+      res.send("Failed");
+    }
+  }).catch(() => {
+    res.send("Failed");
+  })
+})
 module.exports = router;

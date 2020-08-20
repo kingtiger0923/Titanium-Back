@@ -15,6 +15,7 @@ app.use(cors());
 db.on('error', console.error.bind(console, 'MongoDB connection error:'));
 
 app.use('/public', express.static('pdfs'));
+app.use('/products', express.static('inventory'));
 
 app.use(apiRoutes);
 
