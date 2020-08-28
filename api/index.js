@@ -38,7 +38,10 @@ router.post('/join', (req, res) => {
         lastName,
         password,
         admin: false,
-        active: false
+        active: false,
+        p_inventory: false,
+        p_message: false,
+        unreadCount: 0
       }, function(err) {
         if( err ) {
           res.send(JSON.stringify({
@@ -149,7 +152,7 @@ router.post('/adminData', (req, res) => {
       return ;
     }
     UserCollection.findOne({email:decoded.email}).then(user => {
-      if( user !== null && user.admin && user.active ) {
+      if( user !== null && user.admin ) {
         PDFCollection.find({}).then(upload => {
           return upload;
         }).then(uploads => {
@@ -165,7 +168,8 @@ router.post('/adminData', (req, res) => {
               InventoryCollection.find({}).then(inventory => {
                 res.send(JSON.stringify({
                   ...tdata,
-                  inventory
+                  inventory,
+                  curUser: user
                 }));
               })
             })
@@ -210,10 +214,19 @@ router.post('/userData', (req, res) => {
             };
           }).then(data => {
             InventoryCollection.find({}).then(inventory => {
-              res.send(JSON.stringify({
-                ...data,
-                inventory
-              }));
+              if( user.p_inventory ) {
+                res.send(JSON.stringify({
+                  ...data,
+                  inventory,
+                  curUser: user
+                }));
+              } else {
+                res.send(JSON.stringify({
+                  ...data,
+                  inventory: [],
+                  curUser: user
+                }));
+              }
             });
           })
         });
@@ -296,6 +309,37 @@ router.post('/changePermission', (req, res) => {
   })
 });
 
+router.post('/changeIvPermission', (req, res) => {
+  let id = req.body.id;
+  UserCollection.findOne({_id:ObjectId(id)}).then(user => {
+    if( user !== null ) {
+      user.p_inventory = !user.p_inventory;
+      user.save();
+      res.send("success");
+    } else {
+      res.send("failed");
+    }
+  }).catch(err => {
+    res.send("failed");
+  })
+});
+
+router.post('/changeMePermission', (req, res) => {
+  let id = req.body.id;
+  console.log(id);
+  UserCollection.findOne({_id: ObjectId(id)}).then(user => {
+    if( user !== null ) {
+      user.p_message = !user.p_message;
+      user.save();
+      res.send("success");
+    } else {
+      res.send("failed");
+    }
+  }).catch(err => {
+    res.send("failed");
+  })
+})
+
 router.post('/removepdf', (req, res) => {
   let id = req.body.id;
   console.log(id);
@@ -330,6 +374,8 @@ router.post('/addInventory', upload.single('file'), (req, res) => {
         image: filePath
       });
       res.send("success");
+    } else {
+      res.send("failed");
     }
   })
 });
@@ -347,6 +393,48 @@ router.post('/editInventory', (req, res) => {
       res.send("Failed");
     }
   }).catch(() => {
+    res.send("Failed");
+  })
+})
+
+router.post('/editInventoryName', (req, res) => {
+  const id = req.body.id;
+  const val = req.body.val;
+
+  InventoryCollection.findOne({_id: ObjectId(id)}).then(item => {
+    if( item !== null ) {
+      item.name = val;
+      item.save();
+      res.send("success");
+    } else {
+      res.send("Failed");
+    }
+  }).catch(() => {
+    res.send("Failed");
+  })
+})
+
+router.post('/deleteInventory', (req, res) => {
+  const id = req.body.id;
+
+  InventoryCollection.deleteOne({_id:ObjectId(id)}).then( () => {
+    res.send("success");
+  }).catch(err => {
+    res.send("Failed");
+  })
+});
+
+router.post('/readMessage', (req, res) => {
+  const email = req.body.email;
+  UserCollection.findOne({email}).then(user => {
+    if( user !== null ) {
+      user.unreadCount = 0;
+      user.save();
+      res.send("success");
+    } else {
+      res.send("Failed");
+    }
+  }).catch(err => {
     res.send("Failed");
   })
 })

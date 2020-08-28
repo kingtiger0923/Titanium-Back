@@ -8,7 +8,10 @@ const UserSchema = new Schema({
   lastName: String,
   password: String,
   active: Boolean,
-  admin: Boolean
+  admin: Boolean,
+  p_inventory: Boolean,
+  p_message: Boolean,
+  unreadCount: Number
 });
 
 module.exports = UserCollection = mongoose.model("user", UserSchema);
