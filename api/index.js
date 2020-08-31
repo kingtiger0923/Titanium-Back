@@ -17,6 +17,7 @@ var storage = multer.diskStorage({
   },
 });
 var upload = multer({storage});
+var XLSX = require('xlsx');
 
 // Mongoose Models
 const UserCollection = require('../models/UserModel');
@@ -437,5 +438,44 @@ router.post('/readMessage', (req, res) => {
   }).catch(err => {
     res.send("Failed");
   })
-})
+});
+
+router.post('/excelUpload', upload.single('file'), (req, res) => {
+  const fileName = req.file.filename;
+  const splits = fileName.split('.');
+  const type = splits[splits.length - 1];
+
+  if( type.toLowerCase() !== 'xlsx' ) {
+    fs.unlinkSync('./uploads/' + fileName);
+    res.send("failed");
+    return ;
+  }
+  if( !fs.existsSync('./excels') )
+    fs.mkdirSync( './excels' );
+  fs.renameSync('./uploads/' + fileName, './excels/excel.xlsx');
+
+  res.send("success");
+});
+
+router.post('/getExcelData', (req, res) => {
+  let workbook = XLSX.readFile('./excels/excel.xlsx');
+  let sheet_name_list = workbook.SheetNames;
+  
+  let resdata = {
+    sheets: sheet_name_list,
+    sheetDatas: []
+  };
+  
+  sheet_name_list.forEach((name) => {
+    let sheetData = XLSX.utils.sheet_to_csv(workbook.Sheets[name]);
+    let sheetRow = sheetData.split('\n');
+    let data = [];
+    for( let i = 0; i < sheetRow.length; i ++ ) {
+      if( sheetRow[i].length === 0 ) continue;
+      data.push(sheetRow[i].split(','));
+    }
+    resdata.sheetDatas.push(data);
+  });
+  res.send(JSON.stringify(resdata));
+});
 module.exports = router;
